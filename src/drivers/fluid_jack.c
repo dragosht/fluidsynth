@@ -493,15 +493,19 @@ fluid_jack_client_register_ports(void *driver, int isaudio, jack_client_t *clien
 
     if((unsigned long)sample_rate != jack_srate)
     {
-        FLUID_LOG(FLUID_INFO, "Jack sample rate mismatch, adjusting."
+        if(dev->callback == NULL)
+        {
+            FLUID_LOG(FLUID_INFO, "Jack sample rate mismatch, adjusting."
                   " (synth.sample-rate=%lu, jackd=%lu)", (unsigned long)sample_rate, jack_srate);
-        fluid_settings_setnum(settings, "synth.sample-rate", jack_srate);
-    }
-
-    /* Changing sample rate is non RT, so make sure we process it and/or other things now */
-    if(dev->callback == NULL)
-    {
-        fluid_synth_process_event_queue(dev->data);
+            fluid_synth_set_sample_rate(dev->data, jack_srate);
+            /* Changing sample rate is non RT, so make sure we process it and/or other things now */
+            fluid_synth_process_event_queue(dev->data);
+        }
+        else
+        {
+            FLUID_LOG(FLUID_WARN, "Jack sample rate mismatch, impossible to adjust, because new_fluid_audio_driver2() was used with a custom synth object!"
+                  " (synth.sample-rate=%lu, jackd=%lu)", (unsigned long)sample_rate, jack_srate);
+        }
     }
 
     return FLUID_OK;
